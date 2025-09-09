@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:telsim_attendance/Camera/myCamera.dart';
+import 'package:telsim_attendance/Screen/registerFace.dart';
 
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});
@@ -27,7 +28,7 @@ class _HomescreenState extends State<Homescreen> {
         elevation: 6,
       ),
       body: SafeArea(
-        child:Mycamera()
+        child:RegisterFace()
       ),
     );
   }
