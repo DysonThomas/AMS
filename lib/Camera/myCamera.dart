@@ -1,8 +1,12 @@
 
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image/image.dart' as img;
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+
+import '../Functions/detectFace.dart';
 
 class Mycamera extends StatefulWidget {
   const Mycamera({super.key});
@@ -16,11 +20,22 @@ class MycameraState extends State<Mycamera> {
   bool _initializing = true;
   String? _error;
   img.Image? croppedFace;
+  bool _isDetecting = false;
+  int? _lastProcessed;
+  late FaceDetector faceDetector;
 
   @override
   void initState() {
     super.initState();
     _initCamera();
+    faceDetector = FaceDetector(
+
+      options: FaceDetectorOptions(
+        performanceMode: FaceDetectorMode.accurate,
+        enableContours: true,
+        enableClassification: true,
+      ),
+    );
   }
 
   Future<void> _initCamera() async {
@@ -54,23 +69,25 @@ class MycameraState extends State<Mycamera> {
       // 4) Create and initialize controller
       final controller = CameraController(
         camera,
-        ResolutionPreset.medium, // Changed from max to medium for better performance
+        ResolutionPreset.high, // Changed from max to medium for better performance
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,  // Better for ML Kit
       );
 
       await controller.initialize();
+
       if (!mounted) return;
       setState(() {
         _controller = controller;
         _initializing = false;
-      });
+        });
     } catch (e) {
       setState(() {
         _initializing = false;
         _error = 'Failed to initialize camera: $e';
       });
     }
+
   }
   Future<XFile?> capture() async {
     if (_controller != null && _controller!.value.isInitialized) {
@@ -125,7 +142,9 @@ class MycameraState extends State<Mycamera> {
     _controller?.stopImageStream();
     _controller?.dispose();
     super.dispose();
+    faceDetector.close();
   }
+
 
   @override
   Widget build(BuildContext context) {

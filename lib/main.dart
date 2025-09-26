@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:telsim_attendance/Screen/homeScreen.dart';
+import 'package:telsim_attendance/Screen/manageEmp.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock orientation to portrait only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown, // Optional: allow upside down portrait
+  ]);
   runApp(const MyApp());
 }
 

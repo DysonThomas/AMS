@@ -1,10 +1,10 @@
-import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:telsim_attendance/Camera/myCamera.dart';
-import 'package:telsim_attendance/Screen/registerFace.dart';
+import 'package:flutter/services.dart';
+import 'package:telsim_attendance/Screen/Facereco.dart';
+import 'package:telsim_attendance/components/myDrawer.dart';
+
+import '../components/myClock.dart';
 
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});
@@ -14,12 +14,21 @@ class Homescreen extends StatefulWidget {
 }
 
 class _HomescreenState extends State<Homescreen> {
-
+  @override
+  void initState() {
+    super.initState();
+    // Disable system navigation (Android only)
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+      overlays: [SystemUiOverlay.top], // Keep only status bar
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // uncomment/replace your AppBar if you want
+     drawer: Mydrawer(currentRoute: 'home',),
       appBar: AppBar(
+
         title: const Text(
           'Telsim',
           style: TextStyle(fontWeight: FontWeight.w600),
@@ -28,7 +37,13 @@ class _HomescreenState extends State<Homescreen> {
         elevation: 6,
       ),
       body: SafeArea(
-        child:RegisterFace()
+        child:Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LiveClock(),
+            Facedetect(),
+          ],
+        )
       ),
     );
   }

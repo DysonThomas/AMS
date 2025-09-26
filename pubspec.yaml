@@ -40,7 +40,8 @@ dependencies:
   google_mlkit_face_detection: ^0.13.1
   image: ^4.5.4
   tflite_flutter: ^0.11.0
-
+  http:
+  intl:
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -62,6 +63,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/models/facenet.tflite
 
   # To add assets to your application, add an assets section, like this:
   # assets:
