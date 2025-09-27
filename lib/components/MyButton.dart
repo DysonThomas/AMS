@@ -16,9 +16,9 @@ class MyButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 6,
-        backgroundColor: Colors.red.shade300, // 🔴 red background
-        foregroundColor: Colors.white, // text & ripple effect color
-        shadowColor: Colors.redAccent, // softer shadow
+        backgroundColor: Colors.grey, //
+        foregroundColor: Colors.white, //
+        shadowColor: Colors.blueGrey, // 
       ),
       child: Text(
         text,

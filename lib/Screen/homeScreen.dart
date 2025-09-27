@@ -28,7 +28,7 @@ class _HomescreenState extends State<Homescreen> {
     return Scaffold(
       backgroundColor: Colors.grey,
      drawer: Mydrawer(currentRoute: 'home',),
-      appBar: AppBar(
+      appBar:AppBar(
         iconTheme: IconThemeData(
           color: Colors.white70, // 👈 your custom color
         ),
@@ -36,7 +36,7 @@ class _HomescreenState extends State<Homescreen> {
         title: const Text(
           'Telsim',
           style: TextStyle(fontWeight: FontWeight.w600,
-            color: Colors.white70
+              color: Colors.white70
 
           ),
         ),
