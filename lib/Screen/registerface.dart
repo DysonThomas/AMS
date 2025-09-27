@@ -206,7 +206,6 @@ void onRetakeButPressed(){
     return Scaffold(
         drawer: Mydrawer(currentRoute: 'register',),
         appBar: AppBar(
-
           title: const Text(
             'Telsim',
             style: TextStyle(fontWeight: FontWeight.w600),

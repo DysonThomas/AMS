@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Camera/myHomeCamera.dart';
-import '../components/myDrawer.dart';
+import '../Camera/MyHomeCamera.dart';
 
 class Facedetect extends StatefulWidget {
   const Facedetect({super.key});
@@ -10,14 +9,14 @@ class Facedetect extends StatefulWidget {
 }
 
 class _FacedetectState extends State<Facedetect> {
-  final GlobalKey<MycameraState> cameraKey = GlobalKey<MycameraState>();
+  final GlobalKey<MyHomeCameraState> cameraKey = GlobalKey<MyHomeCameraState>();
   @override
   Widget build(BuildContext context) {
     return SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Mycamera(key: cameraKey),
+            MyHomecamera(key: cameraKey),
           ],
         ));
   }

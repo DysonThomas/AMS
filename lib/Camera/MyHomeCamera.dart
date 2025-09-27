@@ -5,17 +5,18 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image/image.dart' as img;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-
 import '../Functions/detectFace.dart';
+import '../Functions/embedface.dart';
 
-class Mycamera extends StatefulWidget {
-  const Mycamera({super.key});
+
+class MyHomecamera extends StatefulWidget {
+  const MyHomecamera({super.key});
 
   @override
-  State<Mycamera> createState() => MycameraState();
+  State<MyHomecamera> createState() => MyHomeCameraState();
 }
 
-class MycameraState extends State<Mycamera> {
+class MyHomeCameraState extends State<MyHomecamera> {
   CameraController? _controller;
   bool _initializing = true;
   String? _error;
@@ -23,7 +24,10 @@ class MycameraState extends State<Mycamera> {
   bool _isDetecting = false;
   int? _lastProcessed;
   late FaceDetector faceDetector;
-
+  final FaceEmbedding _faceEmbeddingService = FaceEmbedding();
+  bool isProcessing = false;
+  bool isModelLoaded = false;
+  Uint8List? displayFace;
   @override
   void initState() {
     super.initState();
@@ -36,6 +40,31 @@ class MycameraState extends State<Mycamera> {
         enableClassification: true,
       ),
     );
+  }
+  Future<void> _initializeFaceEmbedding() async {
+    setState(() {
+      isProcessing = true;
+    });
+
+    try {
+      await _faceEmbeddingService.loadModel();
+      setState(() {
+        isModelLoaded = true;
+        isProcessing = false;
+      });
+    } catch (e) {
+      setState(() {
+        isModelLoaded = false;
+        isProcessing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Failed to load model: $e Contact you Manager"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _initCamera() async {
@@ -81,21 +110,37 @@ class MycameraState extends State<Mycamera> {
         _isDetecting = true;
         try {
           final now = DateTime.now().millisecondsSinceEpoch;
-          if (_lastProcessed == null || (now - _lastProcessed! ) > 5000) {
+          if (_lastProcessed == null || (now - _lastProcessed! ) > 3000) {
             _lastProcessed = now;
-
+            final XFile picture = await controller.takePicture();
             final detector = DetectFace();
-            final faceImage = await detector.detectLiveFace(image, faceDetector,controller);
+            final faceImage = await detector.detectFace(picture,faceDetector);
+            // final faceImage = await detector.detectLiveFace(image, faceDetector,controller);
             if (faceImage != null) {
-              setState(() {
-                final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage!));
-              });
+               final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage!));
+              print('Generating face embedding...');
+              await _faceEmbeddingService.loadModel();
+              final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
+              if (embedding != null) {
+                setState(() {
+                  croppedFace = faceImage;
+                  isProcessing = false;
+                  displayFace=croppedBytes;
+                });
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Face detected"),
-                ),
-              );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("✅ Face processed! Embedding: ${embedding.length} features"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+
+                // Debug print
+                print('Embedding generated successfully!');
+                print('Embedding length: ${embedding.length}');
+                print('Sample values: ${embedding.take(5).toList()}');
+              }
+
               return;
             }
 
@@ -140,7 +185,7 @@ class MycameraState extends State<Mycamera> {
             child: _controller == null || !_controller!.value.isInitialized
                 ? const Center(
               child: Text(
-                'Camera Preview',
+                'Contact Your Supervisor',
                 style: TextStyle(color: Colors.grey),
               ),
             )
@@ -224,6 +269,14 @@ class MycameraState extends State<Mycamera> {
                 ),
 
               ),
+              if (displayFace != null) ...[
+              Image.memory(
+                displayFace!,
+                width: 150,
+                height: 150,
+                fit: BoxFit.cover,
+              )
+             ]
             ],
           )),
         ),
