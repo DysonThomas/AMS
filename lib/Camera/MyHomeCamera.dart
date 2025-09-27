@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image/image.dart' as img;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:telsim_attendance/Functions/match_face.dart';
 import '../Functions/detectFace.dart';
 import '../Functions/embedface.dart';
 
@@ -126,14 +127,10 @@ class MyHomeCameraState extends State<MyHomecamera> {
                   croppedFace = faceImage;
                   isProcessing = false;
                   displayFace=croppedBytes;
+                  MatchFace match = MatchFace();
+                  final res = match.setEmbedding(embedding);
                 });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("✅ Face processed! Embedding: ${embedding.length} features"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
 
                 // Debug print
                 print('Embedding generated successfully!');
@@ -269,14 +266,14 @@ class MyHomeCameraState extends State<MyHomecamera> {
                 ),
 
               ),
-              if (displayFace != null) ...[
-              Image.memory(
-                displayFace!,
-                width: 150,
-                height: 150,
-                fit: BoxFit.cover,
-              )
-             ]
+             //  if (displayFace != null) ...[
+             //  Image.memory(
+             //    displayFace!,
+             //    width: 150,
+             //    height: 150,
+             //    fit: BoxFit.cover,
+             //  )
+             // ]
             ],
           )),
         ),
