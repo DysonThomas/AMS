@@ -7,7 +7,7 @@ import '../constants.dart';
 
 class MatchFace{
   late List<double> embedding;
-Future<bool> setEmbedding(List<double> newEmbedding) async {
+Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
   print("inside api");
   embedding = newEmbedding;
   var url = Uri.parse("$apiBaseUrl/allusers");
@@ -25,16 +25,15 @@ Future<bool> setEmbedding(List<double> newEmbedding) async {
       }
     }
     print("Best match: ${bestMatch?["userName"]} with distance $minDistance");
-    if (minDistance < 1.0) {
-      return true; // Match found
+    if (minDistance < .9) {
+      return bestMatch; // Match found
     } else {
-      return false; // No match
+      return null; // No match
     }
     }
   else {
     print("Error: ${res.statusCode}");
   }
-  return  false;// return the updated list
 }
   double euclideanDistance(List<double> e1, List<dynamic> e2) {
     double sum = 0.0;

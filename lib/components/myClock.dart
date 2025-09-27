@@ -75,7 +75,8 @@ class _LiveClockState extends State<LiveClock> {
             fontSize: 48,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            color: Colors.red,
+            color: Colors.white
+            // color: Color(0xFF424242),
           ),
         ),
         if (widget.showDate) ...[
@@ -84,7 +85,8 @@ class _LiveClockState extends State<LiveClock> {
             _formatDate(_currentTime),
             style: widget.dateStyle ?? TextStyle(
               fontSize: 18,
-              color: Colors.red[200]
+              color: Colors.white70
+              // color: Color(0xFF424242),
             ),
           ),
         ],

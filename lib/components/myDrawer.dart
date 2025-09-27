@@ -10,11 +10,12 @@ class Mydrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
+      backgroundColor: Colors.white,
       child: ListView(
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Colors.red),
-            child: Text('Telsim', style: TextStyle(color: Colors.white, fontSize: 24)),
+            decoration: BoxDecoration(color: Colors.grey[700],),
+            child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24,fontWeight: FontWeight.bold)),
           ),
           if (currentRoute != 'home')
           ListTile(

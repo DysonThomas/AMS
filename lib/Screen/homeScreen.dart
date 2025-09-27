@@ -26,12 +26,19 @@ class _HomescreenState extends State<Homescreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey,
      drawer: Mydrawer(currentRoute: 'home',),
       appBar: AppBar(
-
+        iconTheme: IconThemeData(
+          color: Colors.white70, // 👈 your custom color
+        ),
+        backgroundColor: Colors.grey[700],
         title: const Text(
           'Telsim',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w600,
+            color: Colors.white70
+
+          ),
         ),
         centerTitle: true,
         elevation: 6,

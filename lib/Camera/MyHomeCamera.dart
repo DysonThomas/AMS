@@ -1,14 +1,19 @@
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image/image.dart' as img;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:telsim_attendance/Functions/match_face.dart';
 import '../Functions/detectFace.dart';
 import '../Functions/embedface.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
+import '../constants.dart';
 
 class MyHomecamera extends StatefulWidget {
   const MyHomecamera({super.key});
@@ -29,6 +34,7 @@ class MyHomeCameraState extends State<MyHomecamera> {
   bool isProcessing = false;
   bool isModelLoaded = false;
   Uint8List? displayFace;
+  final FlutterTts flutterTts = FlutterTts();
   @override
   void initState() {
     super.initState();
@@ -42,30 +48,10 @@ class MyHomeCameraState extends State<MyHomecamera> {
       ),
     );
   }
-  Future<void> _initializeFaceEmbedding() async {
-    setState(() {
-      isProcessing = true;
-    });
-
-    try {
-      await _faceEmbeddingService.loadModel();
-      setState(() {
-        isModelLoaded = true;
-        isProcessing = false;
-      });
-    } catch (e) {
-      setState(() {
-        isModelLoaded = false;
-        isProcessing = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ Failed to load model: $e Contact you Manager"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  Future<void> speak(String text) async {
+    await flutterTts.setLanguage("en-AU");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.speak(text);
   }
 
   Future<void> _initCamera() async {
@@ -110,8 +96,10 @@ class MyHomeCameraState extends State<MyHomecamera> {
         if (_isDetecting) return; // avoid overlapping frames
         _isDetecting = true;
         try {
+
           final now = DateTime.now().millisecondsSinceEpoch;
-          if (_lastProcessed == null || (now - _lastProcessed! ) > 3000) {
+          if (_lastProcessed == null || (now - _lastProcessed! ) > 5000) {
+            final timestamp = DateTime.now().toIso8601String(); ;
             _lastProcessed = now;
             final XFile picture = await controller.takePicture();
             final detector = DetectFace();
@@ -123,12 +111,62 @@ class MyHomeCameraState extends State<MyHomecamera> {
               await _faceEmbeddingService.loadModel();
               final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
               if (embedding != null) {
-                setState(() {
+                setState(() async {
                   croppedFace = faceImage;
                   isProcessing = false;
                   displayFace=croppedBytes;
                   MatchFace match = MatchFace();
-                  final res = match.setEmbedding(embedding);
+                  final res = await match.setEmbedding(embedding);
+                  if(res!=null){
+
+                    try{
+                      var url = Uri.parse("$apiBaseUrl/log");
+                      var response = await http.post(url,headers: {
+                        "Content-Type": "application/json",
+                      },
+                          body: jsonEncode({
+                            "userID": res['userID'],
+                            "detected_time":timestamp
+                          })
+                      );
+                      if (response.statusCode == 200) {
+                        speak("Hey, ${res['userName']}, Action Recorded Successfully");
+
+                        setState(() {
+                          ScaffoldMessenger.of(context).showSnackBar(
+
+                            SnackBar(
+                              content: Text("Hey ${res['userName']}! Action Recorded Successfully"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        });
+                      }
+                      else{
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("issue: ${response.body}")),
+                        );
+                      }
+                    }
+                    catch(e){
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Network error: $e")),
+                      );
+                    }
+
+
+                  }
+                  else{
+                    speak("Please Try Again");
+                    setState(() {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Please try Again"),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    });
+                  }
                 });
 
 
@@ -280,4 +318,6 @@ class MyHomeCameraState extends State<MyHomecamera> {
       ],
     );
   }
+
+
 }
