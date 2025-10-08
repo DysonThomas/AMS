@@ -10,22 +10,22 @@ class MyTextBox extends StatelessWidget {
     return    TextField(
       controller: controller,
       style: TextStyle(
-        color: Colors.white70
+        color: Colors.black
       ),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(
           fontSize: 14,
-          color: Colors.white, // 👈 label color
+          color: Colors.grey, // 👈 label color
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.white70, width: 1)
+            borderSide: const BorderSide(color: Colors.grey, width: 1)
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white, width: 2),
+          borderSide: const BorderSide(color: Colors.grey, width: 2),
         ),
       ),
     );

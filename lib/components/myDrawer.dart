@@ -14,7 +14,7 @@ class Mydrawer extends StatelessWidget {
       child: ListView(
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Colors.grey[700],),
+            decoration: BoxDecoration(color:const Color(0xFF2C3E50),),
             child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24,fontWeight: FontWeight.bold)),
           ),
           if (currentRoute != 'home')
@@ -28,15 +28,15 @@ class Mydrawer extends StatelessWidget {
               }
           ),
           if (currentRoute != 'manage')
-          ListTile(
-              leading: Icon(Icons.manage_accounts),
-              title: Text('Manage Employee'),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => Manageemp(),
-                ),);
-              }
-          ),
+          // ListTile(
+          //     leading: Icon(Icons.manage_accounts),
+          //     title: Text('Manage Employee'),
+          //     onTap: () {
+          //       Navigator.push(context, MaterialPageRoute(
+          //         builder: (context) => Manageemp(),
+          //       ),);
+          //     }
+          // ),
           if (currentRoute != 'register')
           ListTile(
               leading: Icon(Icons.add),

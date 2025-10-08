@@ -16,9 +16,9 @@ class MyButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 6,
-        backgroundColor: Colors.grey, //
+        backgroundColor: Color(0xFF2C3E50),
         foregroundColor: Colors.white, //
-        shadowColor: Colors.blueGrey, // 
+        shadowColor: Colors.blueGrey, //
       ),
       child: Text(
         text,

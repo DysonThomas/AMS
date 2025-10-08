@@ -191,7 +191,7 @@ class MycameraState extends State<Mycamera> {
                   'Allign your face inside the camera',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white,
+                    color: Colors.blueGrey,
                   ),
 
                 ),

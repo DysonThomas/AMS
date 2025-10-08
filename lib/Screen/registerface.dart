@@ -69,7 +69,7 @@ class _RegisterFaceState extends State<RegisterFace> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❌ Failed to load model: $e Contact you Manager"),
+          content: Text(" Failed to load model: $e Contact you Manager"),
           backgroundColor: Colors.red,
         ),
       );
@@ -109,7 +109,7 @@ void ONDetectFace(XFile file) async{
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("✅ Face processed! Embedding: ${embedding.length} features"),
+            content: Text(" Face processed! Embedding: ${embedding.length} features"),
             backgroundColor: Colors.green,
           ),
         );
@@ -167,25 +167,32 @@ Future<void> onRegisterButPressed() async {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Employee Registered")),
         );
+
+        setState(() {
+          _idController.clear();
+          _nameController.clear();
+          capturedImage = null;
+          croppedFace = null;
+        });
       }
       else{
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ssue: ${response.body}")),
+          SnackBar(content: Text("Please check the Employee ID and Name")),
         );
+
+        setState(() {
+          _idController.clear();
+          _nameController.clear();
+
+        });
       }
     }
     catch(e){
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Network error: $e")),
+        SnackBar(content: Text("Network error Contact Your Supervisor")),
       );
     }
 
-  setState(() {
-    _idController.clear();
-    _nameController.clear();
-    capturedImage = null;
-    croppedFace = null;
-  });
 }
 void onRetakeButPressed(){
   setState(() {
@@ -204,17 +211,17 @@ void onRetakeButPressed(){
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.grey,
         drawer: Mydrawer(currentRoute: 'register',),
         appBar: AppBar(
+          toolbarHeight: 80.0,
           iconTheme: IconThemeData(
             color: Colors.white70, // 👈 your custom color
           ),
-          backgroundColor: Colors.grey[700],
+          backgroundColor: const Color(0xFF2C3E50),
           title: const Text(
-            'Telsim',
+            'Register Face',
             style: TextStyle(fontWeight: FontWeight.w600,
-                color: Colors.white70
+                color: Colors.white
 
             ),
           ),
@@ -241,7 +248,7 @@ void onRetakeButPressed(){
                       ONDetectFace(image!);
                     },
                     icon: const Icon(Icons.camera_alt),
-                    label: const Text("Capture Image", style: TextStyle(fontSize: 16)),
+                    label: const Text("Capture Image", style: TextStyle(fontSize: 16,)),
                     style: ElevatedButton.styleFrom(
                       elevation: 6,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -252,6 +259,7 @@ void onRetakeButPressed(){
                   ),
                 ],
 
+                // Registration Section
                 // Registration Section
                 if (croppedFace != null) ...[
                   Container(

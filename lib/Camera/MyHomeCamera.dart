@@ -300,7 +300,7 @@ class MyHomeCameraState extends State<MyHomecamera> {
                 'Allign your face inside the camera',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: Colors.white70,
                 ),
 
               ),

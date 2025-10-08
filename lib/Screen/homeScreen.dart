@@ -26,16 +26,16 @@ class _HomescreenState extends State<Homescreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
      drawer: Mydrawer(currentRoute: 'home',),
       appBar:AppBar(
+        toolbarHeight: 80.0,
         iconTheme: IconThemeData(
-          color: Colors.white70, // 👈 your custom color
+          color: Colors.white70,
         ),
-        backgroundColor: Colors.grey[700],
+        backgroundColor: const Color(0xFF2C3E50),
         title: const Text(
-          'Telsim',
-          style: TextStyle(fontWeight: FontWeight.w600,
+          'Attendo',
+          style: TextStyle(fontWeight: FontWeight.bold,
               color: Colors.white70
 
           ),
@@ -44,12 +44,25 @@ class _HomescreenState extends State<Homescreen> {
         elevation: 6,
       ),
       body: SafeArea(
-        child:Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LiveClock(),
-            Facedetect(),
-          ],
+        child:Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Card(
+            elevation: 5, // Shadow depth
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            color: Color(0xFF2C3E50),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  LiveClock(),
+                  Facedetect(),
+                ],
+              ),
+            ),
+          ),
         )
       ),
     );
