@@ -1,6 +1,4 @@
-
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
@@ -12,7 +10,6 @@ import 'package:telsim_attendance/Functions/match_face.dart';
 import '../Functions/detectFace.dart';
 import '../Functions/embedface.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-
 import '../constants.dart';
 
 class MyHomecamera extends StatefulWidget {
@@ -35,23 +32,32 @@ class MyHomeCameraState extends State<MyHomecamera> {
   bool isModelLoaded = false;
   Uint8List? displayFace;
   final FlutterTts flutterTts = FlutterTts();
+  bool _isDisposed = false;
+  bool _isStreamActive = false;
+
   @override
   void initState() {
     super.initState();
     _initCamera();
     faceDetector = FaceDetector(
-
       options: FaceDetectorOptions(
         performanceMode: FaceDetectorMode.accurate,
         enableContours: true,
         enableClassification: true,
       ),
     );
+    _initTTS();
   }
-  Future<void> speak(String text) async {
+
+  Future<void> _initTTS() async {
     await flutterTts.setLanguage("en-AU");
     await flutterTts.setPitch(1.0);
-    await flutterTts.speak(text);
+  }
+
+  Future<void> speak(String text) async {
+    if (!_isDisposed) {
+      await flutterTts.speak(text);
+    }
   }
 
   Future<void> _initCamera() async {
@@ -59,20 +65,24 @@ class MyHomeCameraState extends State<MyHomecamera> {
       // 1) Request camera permission
       final status = await Permission.camera.request();
       if (!status.isGranted) {
-        setState(() {
-          _initializing = false;
-          _error = 'Camera permission denied';
-        });
+        if (mounted) {
+          setState(() {
+            _initializing = false;
+            _error = 'Camera permission denied';
+          });
+        }
         return;
       }
 
       // 2) Get available cameras
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() {
-          _initializing = false;
-          _error = 'No camera found on this device / emulator';
-        });
+        if (mounted) {
+          setState(() {
+            _initializing = false;
+            _error = 'No camera found on this device';
+          });
+        }
         return;
       }
 
@@ -85,125 +95,268 @@ class MyHomeCameraState extends State<MyHomecamera> {
       // 4) Create and initialize controller
       final controller = CameraController(
         camera,
-        ResolutionPreset.high, // Changed from max to medium for better performance
+        ResolutionPreset.high,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,  // Better for ML Kit
+        imageFormatGroup: ImageFormatGroup.yuv420,
       );
 
       await controller.initialize();
 
-      controller.startImageStream((CameraImage image) async {
-        if (_isDetecting) return; // avoid overlapping frames
-        _isDetecting = true;
-        try {
+      if (!mounted || _isDisposed) {
+        controller.dispose();
+        return;
+      }
 
-          final now = DateTime.now().millisecondsSinceEpoch;
-          if (_lastProcessed == null || (now - _lastProcessed! ) > 5000) {
-            final timestamp = DateTime.now().toIso8601String(); ;
-            _lastProcessed = now;
-            final XFile picture = await controller.takePicture();
-            final detector = DetectFace();
-            final faceImage = await detector.detectFace(picture,faceDetector);
-            // final faceImage = await detector.detectLiveFace(image, faceDetector,controller);
-            if (faceImage != null) {
-               final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage!));
-              print('Generating face embedding...');
-              await _faceEmbeddingService.loadModel();
-              final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
-              if (embedding != null) {
-                setState(() async {
-                  croppedFace = faceImage;
-                  isProcessing = false;
-                  displayFace=croppedBytes;
-                  MatchFace match = MatchFace();
-                  final res = await match.setEmbedding(embedding);
-                  if(res!=null){
+      // Start image stream
+      await controller.startImageStream(_processImageStream);
+      _isStreamActive = true;
 
-                    try{
-                      var url = Uri.parse("$apiBaseUrl/log");
-                      var response = await http.post(url,headers: {
-                        "Content-Type": "application/json",
-                      },
-                          body: jsonEncode({
-                            "userID": res['userID'],
-                            "detected_time":timestamp
-                          })
-                      );
-                      if (response.statusCode == 200) {
-                        speak("Hey, ${res['userName']}, Action Recorded Successfully");
+      if (mounted) {
+        setState(() {
+          _controller = controller;
+          _initializing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+          _error = 'Failed to initialize camera: $e';
+        });
+      }
+    }
+  }
 
-                        setState(() {
-                          ScaffoldMessenger.of(context).showSnackBar(
+  void _processImageStream(CameraImage image) async {
+    if (_isDetecting || _isDisposed || !_isStreamActive) return;
 
-                            SnackBar(
-                              content: Text("Hey ${res['userName']}! Action Recorded Successfully"),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        });
-                      }
-                      else{
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("issue: ${response.body}")),
-                        );
-                      }
-                    }
-                    catch(e){
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Network error: $e")),
-                      );
-                    }
+    _isDetecting = true;
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
 
+      // Process every 10 seconds
+      if (_lastProcessed == null || (now - _lastProcessed!) > 10000) {
+        _lastProcessed = now;
 
-                  }
-                  else{
-                    speak("Please Try Again");
-                    setState(() {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Please try Again"),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    });
-                  }
-                });
+        if (_controller == null || !_controller!.value.isInitialized) {
+          return;
+        }
 
+        final timestamp = DateTime.now().toIso8601String();
 
-                // Debug print
-                print('Embedding generated successfully!');
-                print('Embedding length: ${embedding.length}');
-                print('Sample values: ${embedding.take(5).toList()}');
-              }
+        // Stop image stream before taking picture
+        if (_isStreamActive) {
+          await _controller!.stopImageStream();
+          _isStreamActive = false;
+        }
 
-              return;
-            }
+        // Small delay to ensure stream is fully stopped
+        await Future.delayed(const Duration(milliseconds: 100));
 
+        // Take picture
+        final XFile picture = await _controller!.takePicture();
+
+        // Detect face
+        final detector = DetectFace();
+        final faceImage = await detector.detectFace(picture, faceDetector);
+
+        if (faceImage != null && mounted && !_isDisposed) {
+          final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage));
+
+          print('Generating face embedding...');
+          await _faceEmbeddingService.loadModel();
+          final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
+
+          if (embedding != null && mounted && !_isDisposed) {
+            setState(() {
+              croppedFace = faceImage;
+              isProcessing = false;
+              displayFace = croppedBytes;
+            });
+
+            // Match face and handle login/logout
+            await _handleFaceMatch(embedding, timestamp);
           }
         }
-        catch (e) {
-          print("Error in face detection: $e");
-        }
-        finally{
-          _isDetecting = false;
-        }
-        // Always reset the flag
 
-      });
-
-      if (!mounted) return;
-      setState(() {
-        _controller = controller;
-        _initializing = false;
-      });
+        // Restart image stream
+        if (_controller != null &&
+            _controller!.value.isInitialized &&
+            !_isDisposed &&
+            mounted &&
+            !_isStreamActive) {
+          try {
+            await _controller!.startImageStream(_processImageStream);
+            _isStreamActive = true;
+          } catch (e) {
+            print("Error restarting image stream: $e");
+          }
+        }
+      }
     } catch (e) {
-      setState(() {
-        _initializing = false;
-        _error = 'Failed to initialize camera: $e';
-      });
-    }
+      print("Error in face detection: $e");
 
+      // Try to restart image stream on error
+      if (_controller != null &&
+          _controller!.value.isInitialized &&
+          !_isDisposed &&
+          mounted &&
+          !_isStreamActive) {
+        try {
+          await _controller!.startImageStream(_processImageStream);
+          _isStreamActive = true;
+        } catch (restartError) {
+          print("Error restarting image stream after error: $restartError");
+        }
+      }
+    } finally {
+      _isDetecting = false;
+    }
   }
+
+  Future<void> _handleFaceMatch(List<double> embedding, String timestamp) async {
+    try {
+      MatchFace match = MatchFace();
+      final res = await match.setEmbedding(embedding);
+
+      if (res == null) {
+        await speak("Please try again");
+        if (mounted) {
+          _showSnackBar("Please try again", Colors.red);
+        }
+        return;
+      }
+
+      print("Match result: ${res["isLoggedIn"]}");
+
+      final isLoggedIn = res["isLoggedIn"];
+      // Handle userID as either int or String
+      final userID = res['userID'].toString();
+      final userName = res['userName']?.toString() ?? 'User';
+
+      if (isLoggedIn == null || isLoggedIn == 0 || isLoggedIn == false) {
+        // User is logging in
+        await _performLogin(userID, userName, timestamp);
+      } else if (isLoggedIn == true || isLoggedIn == 1) {
+        // User is logging out
+        await _performLogout(userID, userName, timestamp);
+      }
+    } catch (e) {
+      print("Error in face matching: $e");
+      if (mounted) {
+        _showSnackBar("Error processing: $e", Colors.red);
+      }
+    }
+  }
+
+  Future<void> _performLogin(String userID, String userName, String timestamp) async {
+    try {
+      print("Attempting login for userID: $userID");
+      var url = Uri.parse("$apiBaseUrl/login");
+      var response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "userID": userID,
+          "log_in_time": timestamp,
+        }),
+      );
+
+      print("Login response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
+        // Update login status
+        await _updateLoginStatus(userID, true);
+
+        if (mounted) {
+          await speak("Hey $userName! Login recorded successfully");
+          _showSnackBar("Hey $userName! Login recorded successfully", Colors.green);
+        }
+      } else {
+        if (mounted) {
+          await speak("Login Failed");
+          _showSnackBar("Login failed: ${response.body}", Colors.red);
+        }
+      }
+    } catch (e) {
+      print("Login error: $e");
+      if (mounted) {
+        _showSnackBar("Network error: $e", Colors.red);
+      }
+    }
+  }
+
+  Future<void> _performLogout(String userID, String userName, String timestamp) async {
+    try {
+      print("Attempting logout for userID: $userID");
+      var url = Uri.parse("$apiBaseUrl/logout");
+      var response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "userID": userID,
+          "log_in_time": timestamp,
+        }),
+      );
+
+      print("Logout response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
+        // Update login status
+        await _updateLoginStatus(userID, false);
+
+        if (mounted) {
+          await speak("Hey $userName! Logout recorded successfully");
+          _showSnackBar("Hey $userName! Logout recorded successfully", Colors.green);
+        }
+      } else {
+        if (mounted) {
+          await speak("Logout Failed");
+          _showSnackBar("Logout failed: ${response.body}", Colors.red);
+        }
+      }
+    } catch (e) {
+      print("Logout error: $e");
+      if (mounted) {
+        _showSnackBar("Network error: $e", Colors.red);
+      }
+    }
+  }
+
+  Future<void> _updateLoginStatus(String userID, bool isLoggedIn) async {
+    try {
+      print("Updating login status - userID: $userID, isLoggedIn: $isLoggedIn");
+      var url = Uri.parse("$apiBaseUrl/updateLog");
+      var response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "userID": userID,
+          "isLoggedIn": isLoggedIn,
+        }),
+      );
+      print("Update login status response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode != 200) {
+        print("Failed to update login status: ${response.body}");
+      }
+    } catch (e) {
+      print("Error updating login status: $e");
+    }
+  }
+
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: backgroundColor,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Widget _buildOvalPreview() {
     final screenWidth = MediaQuery.of(context).size.width;
     final ovalWidth = screenWidth * 0.7;
@@ -248,16 +401,22 @@ class MyHomeCameraState extends State<MyHomecamera> {
 
   @override
   void dispose() {
-    _controller?.stopImageStream();
-    _controller?.dispose();
-    super.dispose();
+    _isDisposed = true;
+    _isStreamActive = false;
+    _controller?.stopImageStream().then((_) {
+      _controller?.dispose();
+    }).catchError((e) {
+      print("Error disposing camera: $e");
+      _controller?.dispose();
+    });
     faceDetector.close();
+    flutterTts.stop();
+    super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
-    return  Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Center(
@@ -269,7 +428,6 @@ class MyHomeCameraState extends State<MyHomecamera> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-
                 Icon(
                   Icons.error_outline,
                   size: 64,
@@ -286,7 +444,6 @@ class MyHomeCameraState extends State<MyHomecamera> {
                   onPressed: _initCamera,
                   child: const Text('Retry'),
                 ),
-
               ],
             ),
           )
@@ -297,27 +454,26 @@ class MyHomeCameraState extends State<MyHomecamera> {
               _buildOvalPreview(),
               const SizedBox(height: 16),
               const Text(
-                'Allign your face inside the camera',
+                'Align your face inside the camera',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white70,
                 ),
-
               ),
-             //  if (displayFace != null) ...[
-             //  Image.memory(
-             //    displayFace!,
-             //    width: 150,
-             //    height: 150,
-             //    fit: BoxFit.cover,
-             //  )
-             // ]
+              // Optional: Display the detected face
+              // if (displayFace != null) ...[
+              //   const SizedBox(height: 16),
+              //   Image.memory(
+              //     displayFace!,
+              //     width: 150,
+              //     height: 150,
+              //     fit: BoxFit.cover,
+              //   )
+              // ]
             ],
           )),
         ),
       ],
     );
   }
-
-
 }

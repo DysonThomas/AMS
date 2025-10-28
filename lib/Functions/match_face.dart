@@ -12,6 +12,7 @@ Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
   embedding = newEmbedding;
   var url = Uri.parse("$apiBaseUrl/allusers");
   var res = await http.get(url);
+
   if (res.statusCode == 200) {
     final List<dynamic> users = jsonDecode(res.body);
     double minDistance = double.infinity;
@@ -24,7 +25,7 @@ Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
         bestMatch = user;
       }
     }
-    print("Best match: ${bestMatch?["userName"]} with distance $minDistance");
+    // print("Best match: ${bestMatch?["userName"]} with distance $minDistance");
     if (minDistance < .9) {
       return bestMatch; // Match found
     } else {
