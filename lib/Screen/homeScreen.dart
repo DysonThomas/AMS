@@ -72,8 +72,6 @@ class _HomescreenState extends State<Homescreen> {
         },
       );
 
-      debugPrint("🟡 API Status Code: ${response.statusCode}");
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
 

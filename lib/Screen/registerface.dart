@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:telsim_attendance/constants.dart';
 import 'dart:typed_data';
+import '../Functions/fetchstoredetails.dart';
 import '../components/myDrawer.dart';
 
 class RegisterFace extends StatefulWidget {
@@ -23,6 +24,7 @@ class RegisterFace extends StatefulWidget {
 }
 
 class _RegisterFaceState extends State<RegisterFace> {
+
   final GlobalKey<MycameraState> cameraKey = GlobalKey<MycameraState>();
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
@@ -35,7 +37,7 @@ class _RegisterFaceState extends State<RegisterFace> {
   final FaceEmbedding _faceEmbeddingService = FaceEmbedding();
   bool isProcessing = false;
   bool isModelLoaded = false;
-
+  int? storeId;
   @override
   void initState() {
     SystemChrome.setEnabledSystemUIMode(
@@ -145,6 +147,9 @@ void ONDetectFace(XFile file) async{
     }
 }
 Future<void> onRegisterButPressed() async {
+  final store = await LocalStorageService.getStoreDetails();
+  storeId=store?['storeId'];
+  print(store);
   if (faceEmbedding == null) {
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("No face embedding. Capture and detect face first!"))
@@ -160,7 +165,8 @@ Future<void> onRegisterButPressed() async {
           body: jsonEncode({
             "userID": _idController.text,
             "userName": _nameController.text,
-            "faceembed":faceEmbedding
+            "faceembed":faceEmbedding,
+            "storeId":storeId
           })
       );
        print(response);

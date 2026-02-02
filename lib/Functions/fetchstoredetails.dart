@@ -11,9 +11,13 @@ class LocalStorageService {
     if (userString == null) return null;
 
     final Map<String, dynamic> user = jsonDecode(userString);
-
+    print("🔴user🔴");
+    print(user);
     return {
       "storeId": user['storeId'],
     };
   }
+
 }
+
+
