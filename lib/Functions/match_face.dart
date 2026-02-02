@@ -4,15 +4,19 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 
 import '../constants.dart';
+import 'fetchstoredetails.dart';
 
 class MatchFace{
+  int? storeId;
   late List<double> embedding;
 Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
   print("inside api");
   embedding = newEmbedding;
-  var url = Uri.parse("$apiBaseUrl/allusers");
+  final store = await LocalStorageService.getStoreDetails();
+  storeId=store?['storeId'];
+  var url = Uri.parse("$apiBaseUrl/allusers?storeId=$storeId",);
   var res = await http.get(url);
-
+  print(res.body);
   if (res.statusCode == 200) {
     final List<dynamic> users = jsonDecode(res.body);
     double minDistance = double.infinity;

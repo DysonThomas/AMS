@@ -163,6 +163,7 @@ Future<void> onRegisterButPressed() async {
             "faceembed":faceEmbedding
           })
       );
+       print(response);
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Employee Registered")),

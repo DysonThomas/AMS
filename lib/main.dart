@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:telsim_attendance/Functions/checkAuthScreen.dart';
 import 'package:telsim_attendance/Screen/homeScreen.dart';
-import 'package:telsim_attendance/Screen/manageEmp.dart';
+import 'package:telsim_attendance/Screen/loginPage.dart';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,14 +19,20 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
+
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+
   @override
+
   Widget build(BuildContext context) {
+    final storage = FlutterSecureStorage();
+    bool isLoading = true;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home:Homescreen()
+
+      home:CheckAuthScreen()
     );
   }
 }

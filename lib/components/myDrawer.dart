@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:telsim_attendance/Screen/editEmployee.dart';
 import 'package:telsim_attendance/Screen/homeScreen.dart';
 import '../Screen/manageEmp.dart';
 import '../Screen/registerFace.dart';
@@ -44,6 +45,15 @@ class Mydrawer extends StatelessWidget {
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(
                   builder: (context) => RegisterFace(),
+                ),);
+              }
+          ),
+          ListTile(
+              leading: Icon(Icons.edit),
+              title: Text('Edit Employee Details'),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (context) => ManageEmployee(),
                 ),);
               }
           ),

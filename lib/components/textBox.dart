@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class MyTextBox extends StatelessWidget {
   final TextEditingController controller;
   final String label;
-  const MyTextBox({super.key, required this.controller, required this.label});
+  final bool obscureText;
+  const MyTextBox({super.key, required this.controller, required this.label, this.obscureText = false,});
 
   @override
   Widget build(BuildContext context) {
     return    TextField(
+      obscureText: obscureText,
       controller: controller,
       style: TextStyle(
         color: Colors.black
