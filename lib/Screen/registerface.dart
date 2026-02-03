@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:telsim_attendance/Functions/detectFace.dart';
 import 'package:telsim_attendance/Functions/embedface.dart';
+import 'package:telsim_attendance/Screen/editEmployee.dart';
 import 'package:telsim_attendance/components/MyButton.dart';
 import 'package:telsim_attendance/components/textBox.dart';
 import '../Camera/myCamera.dart';
@@ -17,7 +18,10 @@ import '../Functions/fetchstoredetails.dart';
 import '../components/myDrawer.dart';
 
 class RegisterFace extends StatefulWidget {
-  const RegisterFace({super.key});
+  final bool updateMode;
+  final String? employeeId;
+  final String? employeeName;
+  const RegisterFace({super.key, this.updateMode=false, this.employeeId, this.employeeName});
 
   @override
   State<RegisterFace> createState() => _RegisterFaceState();
@@ -40,6 +44,10 @@ class _RegisterFaceState extends State<RegisterFace> {
   int? storeId;
   @override
   void initState() {
+    if (widget.updateMode) {
+      _idController.text = widget.employeeId ?? '';
+      _nameController.text = widget.employeeName ?? '';
+    }
     SystemChrome.setEnabledSystemUIMode(
         SystemUiMode.immersiveSticky,
         overlays: [SystemUiOverlay.top]);
@@ -207,14 +215,62 @@ void onRetakeButPressed(){
     croppedFace = null;
   });
 }  @override
-  void dispose() {
+void dispose() {
     faceDetector.close();
     _faceEmbeddingService.dispose();
     _idController.dispose();
     _nameController.dispose();
     super.dispose();
   }
+Future<void> onUpdateButPressed() async{
+    if (faceEmbedding == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No face embedding. Capture and detect face first!"))
+      );
+      return;
+    }
+    try{
 
+      var url = Uri.parse("$apiBaseUrl/updateFaceEmbed");
+      var response = await http.put(url,headers: {
+        "Content-Type": "application/json",
+      },
+          body: jsonEncode({
+            "userID": _idController.text,
+            "userName": _nameController.text,
+            "faceembed":faceEmbedding,
+            "storeId":storeId
+          })
+      );
+      print(response.body);
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Employee Updated Sucessfully")),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => ManageEmployee()),
+              (route) => false,
+        );
+        setState(() {
+          _idController.clear();
+          _nameController.clear();
+          capturedImage = null;
+          croppedFace = null;
+        });
+      }
+      else{
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please check the Employee ID and Name")),
+        );
+      }
+    }
+    catch(e){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Network error Contact Your Supervisor")),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,9 +281,10 @@ void onRetakeButPressed(){
             color: Colors.white70, // 👈 your custom color
           ),
           backgroundColor: const Color(0xFF2C3E50),
-          title: const Text(
-            'Register Face',
-            style: TextStyle(fontWeight: FontWeight.w600,
+          title:
+          Text(
+            widget.updateMode ? 'Update Face' : 'Register Face',
+            style: const TextStyle(fontWeight: FontWeight.w600,
                 color: Colors.white
 
             ),
@@ -245,6 +302,9 @@ void onRetakeButPressed(){
                 // Camera Section
                 if (croppedFace == null) ...[
                   Mycamera(key: cameraKey),
+
+
+
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -293,11 +353,13 @@ void onRetakeButPressed(){
                   ),
                   const SizedBox(height: 24),
                   // Employee ID
+                  widget.updateMode ?    MyTextBox(controller: _idController, label: "Employee ID",enabled: false,) :
                   MyTextBox(controller: _idController, label: "Employee ID"),
                   const SizedBox(height: 16),
                   MyTextBox(controller: _nameController, label: "Employee Name"),
                   const SizedBox(height: 24),
                   // Register Button
+                  widget.updateMode ?  MyButton(text: "Update", onPressed:onUpdateButPressed) :
                   MyButton(text: "Register", onPressed:onRegisterButPressed),
                   const SizedBox(height: 12),
                   MyButton(text: "Retake Image", onPressed: onRetakeButPressed),

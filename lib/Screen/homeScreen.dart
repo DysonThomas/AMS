@@ -9,6 +9,7 @@ import 'package:telsim_attendance/Screen/Facereco.dart';
 import 'package:telsim_attendance/Screen/loginPage.dart';
 import 'package:telsim_attendance/components/myDrawer.dart';
 
+import '../Functions/fetchstoredetails.dart';
 import '../components/myClock.dart';
 import '../constants.dart';
 
@@ -103,7 +104,40 @@ class _HomescreenState extends State<Homescreen> {
     final bool isTablet = MediaQuery.of(context).size.shortestSide > 600;
 
     return Scaffold(
-      drawer: Mydrawer(currentRoute: 'home'),
+      drawer: (isActive == 1) ? Mydrawer(currentRoute: 'home') :  Drawer(
+        backgroundColor: Colors.white,
+        child: ListView(
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(color: const Color(0xFF2C3E50)),
+                child: Text(
+                  'Menu',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('Contact Admin'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  await LocalStorageService.clear();
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => Loginpage()),
+                        (route) => false,
+                  );
+                },
+              ),
+            ]
+        )
+    ),
       appBar: AppBar(
         toolbarHeight: 80.0,
         iconTheme: IconThemeData(
@@ -127,7 +161,7 @@ class _HomescreenState extends State<Homescreen> {
             color: Colors.white,
             backgroundColor: const Color(0xFF2C3E50),
             onRefresh: () async {
-              getStoreDetails();
+              await getStoreDetails();
               await Future.delayed(const Duration(milliseconds: 500));
             },
             child: ListView(
@@ -149,7 +183,16 @@ class _HomescreenState extends State<Homescreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (isActive == 1) ...[
+                          if (isLoading || isActive == null) ...[
+                            const Expanded(
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ]
+                          else if (isActive == 1) ...[
                             Text(
                               storeName,
                               style: const TextStyle(

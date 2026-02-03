@@ -12,8 +12,6 @@ class MatchFace{
 Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
   print("inside api");
   embedding = newEmbedding;
-
-
   final store = await LocalStorageService.getStoreDetails();
   storeId=store?['storeId'];
   var url = Uri.parse("$apiBaseUrl/allusers?storeId=$storeId",);
@@ -31,8 +29,10 @@ Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
         bestMatch = user;
       }
     }
-    // print("Best match: ${bestMatch?["userName"]} with distance $minDistance");
-    if (minDistance < .9) {
+    print('Dyson111');
+    print(bestMatch);
+ print(bestMatch?["isActive"]);
+    if (minDistance < .9  && bestMatch?["isActive"]==1 ) {
       return bestMatch; // Match found
     } else {
       return null; // No match

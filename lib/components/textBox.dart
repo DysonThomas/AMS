@@ -4,11 +4,13 @@ class MyTextBox extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final bool obscureText;
-  const MyTextBox({super.key, required this.controller, required this.label, this.obscureText = false,});
+  final bool enabled;
+  const MyTextBox({super.key, required this.controller, required this.label, this.obscureText = false,this.enabled=true});
 
   @override
   Widget build(BuildContext context) {
     return    TextField(
+      enabled: enabled,
       obscureText: obscureText,
       controller: controller,
       style: TextStyle(

@@ -20,6 +20,7 @@ class LocalStorageService {
   }
 
   static Future<int?> getStoreStatus() async {
+    final storage = FlutterSecureStorage();
     final userString = await _storage.read(key: 'user');
     if (userString == null) return null;
 
@@ -53,4 +54,18 @@ class LocalStorageService {
       return null;
     }
   }
+  static Future<void> clear() async {
+    await _storage.deleteAll();
+  }
+  static Future<Map<String, dynamic>?> getEmployeeStatus() async {
+    final userString = await _storage.read(key: 'user');
+    if (userString == null) return null;
+
+    final Map<String, dynamic> user = jsonDecode(userString);
+    return {
+      "isActive": user['isActive'],
+    };
+  }
+
+
 }

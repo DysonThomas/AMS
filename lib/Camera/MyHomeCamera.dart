@@ -35,9 +35,11 @@ class MyHomeCameraState extends State<MyHomecamera> {
   final FlutterTts flutterTts = FlutterTts();
   bool _isDisposed = false;
   bool _isStreamActive = false;
+ int? storeStatus;
 
   @override
   void initState() {
+    getStoreStatus();
     super.initState();
     _initCamera();
     faceDetector = FaceDetector(
@@ -48,6 +50,9 @@ class MyHomeCameraState extends State<MyHomecamera> {
       ),
     );
     _initTTS();
+  }
+  getStoreStatus() async {
+     storeStatus = await LocalStorageService.getStoreStatus();
   }
 
   Future<void> _initTTS() async {
@@ -133,7 +138,7 @@ class MyHomeCameraState extends State<MyHomecamera> {
 
     _isDetecting = true;
     try {
-      final int? storeStatus = await LocalStorageService.getStoreStatus();
+
 
       final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -406,15 +411,22 @@ print('hurrey');
   }
 
   @override
+  @override
   void dispose() {
     _isDisposed = true;
     _isStreamActive = false;
-    _controller?.stopImageStream().then((_) {
-      _controller?.dispose();
-    }).catchError((e) {
+
+    try {
+      if (_controller != null && _controller!.value.isInitialized) {
+        if (_controller!.value.isStreamingImages) {
+          _controller!.stopImageStream();
+        }
+        _controller!.dispose();
+      }
+    } catch (e) {
       print("Error disposing camera: $e");
-      _controller?.dispose();
-    });
+    }
+
     faceDetector.close();
     flutterTts.stop();
     super.dispose();
