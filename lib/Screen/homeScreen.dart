@@ -21,14 +21,13 @@ class Homescreen extends StatefulWidget {
 
 class _HomescreenState extends State<Homescreen> {
   @override
-
   final storage = FlutterSecureStorage();
   bool isLoading = true;
   int? storeId;
   int? isActive;
-  String storeName='';
-  void initState() {
+  String storeName = '';
 
+  void initState() {
     super.initState();
     // Disable system navigation (Android only)
     SystemChrome.setEnabledSystemUIMode(
@@ -37,8 +36,8 @@ class _HomescreenState extends State<Homescreen> {
       // Keep only status bar
     );
     fetchStoredetails();
-
   }
+
   fetchStoredetails() async {
     String? user = await storage.read(key: 'user');
     if (user != null) {
@@ -50,13 +49,13 @@ class _HomescreenState extends State<Homescreen> {
       });
       getStoreDetails();
     }
-
   }
+
   Future<void> getStoreDetails() async {
-    debugPrint("🟢 getStoreDetails() called");
+
 
     if (storeId == null) {
-      debugPrint("🔴 storeId is null, API not called");
+
       return;
     }
 
@@ -82,8 +81,7 @@ class _HomescreenState extends State<Homescreen> {
           isActive = data['isActive'];
         });
 
-        debugPrint("✅ Store Name: $storeName");
-        debugPrint("✅ Store Active: $isActive");
+
       }
       else if (response.statusCode == 404) {
         debugPrint("⚠️ No store found for ID: $storeId");
@@ -97,11 +95,16 @@ class _HomescreenState extends State<Homescreen> {
   }
 
 
+
+  @override
   @override
   Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final bool isTablet = MediaQuery.of(context).size.shortestSide > 600;
+
     return Scaffold(
-     drawer: Mydrawer(currentRoute: 'home',),
-      appBar:AppBar(
+      drawer: Mydrawer(currentRoute: 'home'),
+      appBar: AppBar(
         toolbarHeight: 80.0,
         iconTheme: IconThemeData(
           color: Colors.white70,
@@ -109,63 +112,221 @@ class _HomescreenState extends State<Homescreen> {
         backgroundColor: const Color(0xFF2C3E50),
         title: const Text(
           'Attendo',
-          style: TextStyle(fontWeight: FontWeight.bold,
-              color: Colors.white70
-
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white70,
           ),
         ),
         centerTitle: true,
         elevation: 6,
       ),
       body: SafeArea(
-        child:Padding(
+        child: Padding(
           padding: const EdgeInsets.all(15.0),
-          child: Card(
-
-            elevation: 5, // Shadow depth
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            color: Color(0xFF2C3E50),
-
-            child:
-            Padding(
-
-              padding: const EdgeInsets.all(16.0),
-
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-
-                  if(isActive==1)...[
-                    Text(
-                      storeName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+          child: RefreshIndicator(
+            color: Colors.white,
+            backgroundColor: const Color(0xFF2C3E50),
+            onRefresh: () async {
+              getStoreDetails();
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: ListView(
+              // Makes RefreshIndicator work even when content is short
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: isTablet
+                      ? screenHeight * 0.75
+                      : screenHeight * 0.82,
+                  child: Card(
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    color: const Color(0xFF2C3E50),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isActive == 1) ...[
+                            Text(
+                              storeName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            LiveClock(),
+                            Facedetect(),
+                          ] else ...[
+                            Expanded(
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 32),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.white38,
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: Colors.white,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.lock_outline,
+                                        color: Colors.black,
+                                        size: 48,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Store Inactive',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Please contact your manager\nto activate your store.',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 14,
+                                          height: 1.5,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  LiveClock(),
-                  Facedetect(),
-              ]
-                  else...[const Text(
-                    "Contact your manager",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),]
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
-
           ),
-        )
+        ),
       ),
     );
   }
+
+
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     drawer: Mydrawer(currentRoute: 'home',),
+  //     appBar: AppBar(
+  //       toolbarHeight: 80.0,
+  //       iconTheme: IconThemeData(
+  //         color: Colors.white70,
+  //       ),
+  //       backgroundColor: const Color(0xFF2C3E50),
+  //       title: const Text(
+  //         'Attendo',
+  //         style: TextStyle(fontWeight: FontWeight.bold,
+  //             color: Colors.white70
+  //
+  //         ),
+  //       ),
+  //       centerTitle: true,
+  //       elevation: 6,
+  //     ),
+  //     body: SafeArea(
+  //         child: Padding(
+  //           padding: const EdgeInsets.all(15.0),
+  //           child: Card(
+  //
+  //             elevation: 5, // Shadow depth
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(15),
+  //             ),
+  //             color: Color(0xFF2C3E50),
+  //
+  //             child:
+  //             Padding(
+  //
+  //               padding: const EdgeInsets.all(16.0),
+  //
+  //               child: Column(
+  //                 mainAxisAlignment: MainAxisAlignment.center,
+  //                 children: [
+  //
+  //                   if(isActive == 1)...[
+  //                     Text(
+  //                       storeName,
+  //                       style: const TextStyle(
+  //                         color: Colors.white,
+  //                         fontSize: 22,
+  //                         fontWeight: FontWeight.bold,
+  //                         letterSpacing: 0.5,
+  //                       ),
+  //                     ),
+  //                     LiveClock(),
+  //                     Facedetect(),
+  //                   ]
+  //                   else
+  //                     ...[
+  //                       Expanded(
+  //                         child: Center(
+  //                           child: Container(
+  //                             padding: const EdgeInsets.symmetric(
+  //                                 horizontal: 24, vertical: 32),
+  //                             decoration: BoxDecoration(
+  //                               border: Border.all(
+  //                                   color: Colors.white38, width: 1.5),
+  //                               borderRadius: BorderRadius.circular(16),
+  //                               color: Colors.white,
+  //                             ),
+  //                             child: Column(
+  //                               mainAxisSize: MainAxisSize.min,
+  //                               children: [
+  //                                 const Icon(
+  //                                   Icons.lock_outline,
+  //                                   color: Colors.black,
+  //                                   size: 48,
+  //                                 ),
+  //                                 const SizedBox(height: 16),
+  //                                 const Text(
+  //                                   'Store Inactive',
+  //                                   style: TextStyle(
+  //                                     color: Colors.white,
+  //                                     fontSize: 18,
+  //                                     fontWeight: FontWeight.bold,
+  //                                   ),
+  //                                 ),
+  //                                 const SizedBox(height: 8),
+  //                                 const Text(
+  //                                   'Please contact your manager\nto activate your store.',
+  //                                   style: TextStyle(
+  //                                     color: Colors.black,
+  //                                     fontSize: 14,
+  //                                     height: 1.5,
+  //                                   ),
+  //                                   textAlign: TextAlign.center,
+  //                                 ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                         ),
+  //                       ),
+  //                     ]
+  //                 ],
+  //               ),
+  //             ),
+  //
+  //           ),
+  //         )
+  //     ),
+  //   );
+  // }
 }

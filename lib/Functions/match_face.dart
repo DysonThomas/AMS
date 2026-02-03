@@ -12,6 +12,8 @@ class MatchFace{
 Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
   print("inside api");
   embedding = newEmbedding;
+
+
   final store = await LocalStorageService.getStoreDetails();
   storeId=store?['storeId'];
   var url = Uri.parse("$apiBaseUrl/allusers?storeId=$storeId",);

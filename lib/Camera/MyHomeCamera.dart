@@ -10,6 +10,7 @@ import 'package:telsim_attendance/Functions/match_face.dart';
 import '../Functions/detectFace.dart';
 import '../Functions/embedface.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../Functions/fetchstoredetails.dart';
 import '../constants.dart';
 
 class MyHomecamera extends StatefulWidget {
@@ -132,11 +133,16 @@ class MyHomeCameraState extends State<MyHomecamera> {
 
     _isDetecting = true;
     try {
+      final int? storeStatus = await LocalStorageService.getStoreStatus();
+
       final now = DateTime.now().millisecondsSinceEpoch;
 
       // Process every 10 seconds
       if (_lastProcessed == null || (now - _lastProcessed!) > 10000) {
         _lastProcessed = now;
+        if(storeStatus==0){
+print('hurrey');
+          return;}
 
         if (_controller == null || !_controller!.value.isInitialized) {
           return;
