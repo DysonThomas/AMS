@@ -66,6 +66,21 @@ class LocalStorageService {
       "isActive": user['isActive'],
     };
   }
+  static Future<List<Map<String, dynamic>>?> getAllFaces() async {
+    final faceData = await _storage.read(key: 'faceData');
+
+    if (faceData == null) return null;
+
+    // Decode the JSON string back to a List
+    final List<dynamic> decodedData = jsonDecode(faceData);
+
+    // Convert to List<Map<String, dynamic>>
+    List<Map<String, dynamic>> faces = decodedData.map((face) {
+      return Map<String, dynamic>.from(face);
+    }).toList();
+
+    return faces;
+  }
 
 
 }

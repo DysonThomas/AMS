@@ -2,47 +2,64 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:telsim_attendance/Functions/FetchAllFaces.dart';
 
 import '../constants.dart';
 import 'fetchstoredetails.dart';
 
-class MatchFace{
+class MatchFace {
   int? storeId;
   late List<double> embedding;
-Future<Map<String,dynamic>?> setEmbedding(List<double> newEmbedding) async {
-  print("inside api");
-  embedding = newEmbedding;
-  final store = await LocalStorageService.getStoreDetails();
-  storeId=store?['storeId'];
-  var url = Uri.parse("$apiBaseUrl/allusers?storeId=$storeId",);
-  var res = await http.get(url);
-  print(res.body);
-  if (res.statusCode == 200) {
-    final List<dynamic> users = jsonDecode(res.body);
+
+  Future<Map<String, dynamic>?> setEmbedding(List<double> newEmbedding) async {
+    embedding = newEmbedding;
+
+    final users = await LocalStorageService.getAllFaces();
+
+    // Check if users is null or empty
+    if (users == null || users.isEmpty) {
+      print("⚠️ No faces found in local storage");
+      return null;
+    }
+
     double minDistance = double.infinity;
     Map<String, dynamic>? bestMatch;
+
     for (var user in users) {
-      List<dynamic> dbEmbed = user["faceembed"];
+      // Handle faceembed safely
+      if (user["faceembed"] == null) continue;
+
+      // Parse faceembed - it might be stored as a JSON string
+      List<dynamic> dbEmbed;
+      if (user["faceembed"] is String) {
+        dbEmbed = jsonDecode(user["faceembed"]);
+      } else {
+        dbEmbed = user["faceembed"];
+      }
+
       double dist = euclideanDistance(embedding, dbEmbed);
+
       if (dist < minDistance) {
         minDistance = dist;
         bestMatch = user;
       }
     }
-    print('Dyson111');
-    print(bestMatch);
- print(bestMatch?["isActive"]);
-    if (minDistance < .9  && bestMatch?["isActive"]==1 ) {
-      return bestMatch; // Match found
+
+    // Check threshold and isActive
+    if (minDistance < 0.9 && bestMatch != null && bestMatch["isActive"] == 1) {
+      print("✅ Match found: ${bestMatch['userName']} (distance: ${minDistance.toStringAsFixed(4)})");
+      return bestMatch;
     } else {
-      return null; // No match
+      print("❌ No match found (best distance: ${minDistance.toStringAsFixed(4)})");
+      return null;
     }
-    }
-  else {
-    print("Error: ${res.statusCode}");
   }
-}
+
   double euclideanDistance(List<double> e1, List<dynamic> e2) {
+    if (e1.length != e2.length) {
+      throw Exception("Embedding dimensions don't match: ${e1.length} vs ${e2.length}");
+    }
+
     double sum = 0.0;
     for (int i = 0; i < e1.length; i++) {
       double diff = e1[i] - (e2[i] as double);

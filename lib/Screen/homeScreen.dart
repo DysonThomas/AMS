@@ -9,6 +9,7 @@ import 'package:telsim_attendance/Screen/Facereco.dart';
 import 'package:telsim_attendance/Screen/loginPage.dart';
 import 'package:telsim_attendance/components/myDrawer.dart';
 
+import '../Functions/FetchAllFaces.dart';
 import '../Functions/fetchstoredetails.dart';
 import '../components/myClock.dart';
 import '../constants.dart';
@@ -36,9 +37,12 @@ class _HomescreenState extends State<Homescreen> {
       overlays: [SystemUiOverlay.top],
       // Keep only status bar
     );
-    fetchStoredetails();
+    OnInit();
   }
-
+  OnInit(){
+    fetchStoredetails();
+    FetchFaces.getFaceDetails();
+  }
   fetchStoredetails() async {
     String? user = await storage.read(key: 'user');
     if (user != null) {
@@ -161,7 +165,7 @@ class _HomescreenState extends State<Homescreen> {
             color: Colors.white,
             backgroundColor: const Color(0xFF2C3E50),
             onRefresh: () async {
-              await getStoreDetails();
+              await OnInit();
               await Future.delayed(const Duration(milliseconds: 500));
             },
             child: ListView(
