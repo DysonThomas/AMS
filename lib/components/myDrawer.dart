@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:telsim_attendance/Screen/editEmployee.dart';
 import 'package:telsim_attendance/Screen/homeScreen.dart';
@@ -15,12 +17,26 @@ class Mydrawer extends StatefulWidget {
 class _MydrawerState extends State<Mydrawer> {
   int? storeActive;
   bool isLoading = true;
-
+  int? role;
   @override
-  // void initState() {
-  //   super.initState();
-  //   _checkStoreStatus();
-  // }
+  void initState() {
+    super.initState();
+    checkRole();
+  }
+  Future<void> checkRole() async {
+    String? userS = await storage.read(key: 'user');
+    if (userS == null) return;
+
+    final user = jsonDecode(userS);
+
+    setState(() {
+      role = user['role'] as int?; // Direct assignment since it's already an int
+      isLoading = false;
+    });
+
+    debugPrint('Role loaded: $role');
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +47,7 @@ class _MydrawerState extends State<Mydrawer> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(color: const Color(0xFF2C3E50)),
-            child: Text(
+            child:  Text(
               'Menu',
               style: TextStyle(
                 color: Colors.white,
@@ -40,7 +56,7 @@ class _MydrawerState extends State<Mydrawer> {
               ),
             ),
           ),
-          if (widget.currentRoute != 'home')
+          if (  role != null && role!=6 && widget.currentRoute != 'home')
             ListTile(
               leading: const Icon(Icons.home),
               title: const Text('Home Screen'),
@@ -52,7 +68,7 @@ class _MydrawerState extends State<Mydrawer> {
                 );
               },
             ),
-          if (widget.currentRoute != 'register')
+          if ( role != null && role!=6 && widget.currentRoute != 'register')
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Register Employee'),
@@ -64,7 +80,7 @@ class _MydrawerState extends State<Mydrawer> {
                 );
               },
             ),
-          if (widget.currentRoute != 'manage')
+          if ( role != null &&  role!=6 && widget.currentRoute != 'manage')
           ListTile(
             leading: const Icon(Icons.edit),
             title: const Text('Edit Employee Details'),
@@ -92,4 +108,6 @@ class _MydrawerState extends State<Mydrawer> {
       ),
     );
   }
+
+
 }

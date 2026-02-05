@@ -18,7 +18,6 @@ class LocalStorageService {
       "storeId": user['storeId'],
     };
   }
-
   static Future<int?> getStoreStatus() async {
     final storage = FlutterSecureStorage();
     final userString = await _storage.read(key: 'user');

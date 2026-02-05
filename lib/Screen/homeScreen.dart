@@ -44,7 +44,10 @@ class _HomescreenState extends State<Homescreen> {
     FetchFaces.getFaceDetails();
   }
   fetchStoredetails() async {
+
     String? user = await storage.read(key: 'user');
+    print("ABCDEFG");
+    print(user);
     if (user != null) {
       final Map<String, dynamic> User = jsonDecode(user);
       setState(() {
