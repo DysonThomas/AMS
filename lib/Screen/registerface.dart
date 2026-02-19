@@ -44,6 +44,7 @@ class _RegisterFaceState extends State<RegisterFace> {
   int? storeId;
   @override
   void initState() {
+    super.initState();
     if (widget.updateMode) {
       _idController.text = widget.employeeId ?? '';
       _nameController.text = widget.employeeName ?? '';
@@ -51,7 +52,6 @@ class _RegisterFaceState extends State<RegisterFace> {
     SystemChrome.setEnabledSystemUIMode(
         SystemUiMode.immersiveSticky,
         overlays: [SystemUiOverlay.top]);
-    super.initState();
     faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableContours: true,
@@ -59,6 +59,36 @@ class _RegisterFaceState extends State<RegisterFace> {
       ),
     );
     _initializeFaceEmbedding();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showBiometricWarning();
+    });
+  }
+  void _showBiometricWarning() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          '⚠️ Biometric Data Notice',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'This system captures and processes your facial '
+              'recognition data for attendance purposes.\n\n'
+              'Under Canadian privacy law (PIPEDA), your biometric '
+              'data is not permanently stored on this device. '
+              'Only an encrypted numerical representation '
+              'of your face is stored on our secure servers.\n\n'
+              'By continuing, you consent to this processing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('I Understand'),
+          ),
+        ],
+      ),
+    );
   }
   Future<void> _initializeFaceEmbedding() async {
     setState(() {
@@ -106,7 +136,6 @@ void ONDetectFace(XFile file) async{
       final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage));
       // Generate face embedding
       print('Generating face embedding...');
-     await _faceEmbeddingService.loadModel();
       final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
 
       if (embedding != null) {
@@ -302,6 +331,19 @@ Future<void> onUpdateButPressed() async{
                 // Camera Section
                 if (croppedFace == null) ...[
                   Mycamera(key: cameraKey),
+
+                  const SizedBox(height: 8),
+
+                  // ✅ Short text underneath camera
+                  const Text(
+                    'Your photo is never saved. Only an encrypted face vector is stored securely',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
 
 
 

@@ -27,7 +27,9 @@ class MycameraState extends State<Mycamera> {
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initCamera();
+    });
     faceDetector = FaceDetector(
 
       options: FaceDetectorOptions(
@@ -75,7 +77,9 @@ class MycameraState extends State<Mycamera> {
       );
 
       await controller.initialize();
+      await Future.delayed(const Duration(milliseconds: 300));
 
+      await controller.setFlashMode(FlashMode.off);
       if (!mounted) return;
       setState(() {
         _controller = controller;
@@ -174,7 +178,14 @@ class MycameraState extends State<Mycamera> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _initCamera,
+                    onPressed:() async {
+                      setState(() {
+                        _initializing = true;
+                        _error = null;
+                      });
+                      await Future.delayed(const Duration(milliseconds: 300)); // 👈
+                      await _initCamera();
+                    },
                     child: const Text('Retry'),
                   ),
 
@@ -187,14 +198,6 @@ class MycameraState extends State<Mycamera> {
                 const SizedBox(height: 20),
                 _buildOvalPreview(),
                 const SizedBox(height: 16),
-                const Text(
-                  'Allign your face inside the camera',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.blueGrey,
-                  ),
-
-                ),
               ],
             )),
           ),

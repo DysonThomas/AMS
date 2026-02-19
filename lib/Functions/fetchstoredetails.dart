@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants.dart';
 
 class LocalStorageService {
+  static List<Map<String, dynamic>>? _cachedFaces; // ← in-memory cache
+
+  static List<Map<String, dynamic>>? get cachedFaces => _cachedFaces;
   static final FlutterSecureStorage _storage =
   const FlutterSecureStorage();
 
@@ -65,21 +69,33 @@ class LocalStorageService {
       "isActive": user['isActive'],
     };
   }
-  static Future<List<Map<String, dynamic>>?> getAllFaces() async {
-    final faceData = await _storage.read(key: 'faceData');
-
-    if (faceData == null) return null;
-
-    // Decode the JSON string back to a List
-    final List<dynamic> decodedData = jsonDecode(faceData);
-
-    // Convert to List<Map<String, dynamic>>
-    List<Map<String, dynamic>> faces = decodedData.map((face) {
-      return Map<String, dynamic>.from(face);
-    }).toList();
-
-    return faces;
+  static List<Map<String, dynamic>>? getAllFaces() {
+    return _cachedFaces; // instant, no async, no decryption
   }
+  static Future<void> updateUserLoginStatus(String userID, bool isLoggedIn) async {
+    if (_cachedFaces == null) return;
 
+    for (var face in _cachedFaces!) {
+      if (face['userID'].toString() == userID) {
+        face['isLoggedIn'] = isLoggedIn ? 1 : 0;
+        print("✅ Updated login status in memory for $userID");
+        return;
+      }
+    }
 
+    print("⚠️ User $userID not found in cache");
+  }
+  static Future<bool> updateAllFaces(List<Map<String, dynamic>> faces) async {
+    try {
+      final facesJson = jsonEncode(faces);
+      await _storage.write(key: 'faceData', value: facesJson);
+      return true;
+    } catch (e) {
+      print("Error updating faces: $e");
+      return false;
+    }
+  }
+  static void setCachedFaces(List<Map<String, dynamic>> faces) {
+    _cachedFaces = faces;
+  }
 }

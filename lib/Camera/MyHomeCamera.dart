@@ -20,7 +20,7 @@ class MyHomecamera extends StatefulWidget {
   State<MyHomecamera> createState() => MyHomeCameraState();
 }
 
-class MyHomeCameraState extends State<MyHomecamera> {
+class MyHomeCameraState extends State<MyHomecamera>  {
   CameraController? _controller;
   bool _initializing = true;
   String? _error;
@@ -35,24 +35,34 @@ class MyHomeCameraState extends State<MyHomecamera> {
   final FlutterTts flutterTts = FlutterTts();
   bool _isDisposed = false;
   bool _isStreamActive = false;
- int? storeStatus;
-
+  int? storeStatus;
+  late final DetectFace _detectFace;
+  late final MatchFace _matchFace;
   @override
   void initState() {
-    getStoreStatus();
     super.initState();
-    _initCamera();
+    _detectFace = DetectFace();  // 👈
+    _matchFace = MatchFace();
+    _initialize();
     faceDetector = FaceDetector(
       options: FaceDetectorOptions(
-        performanceMode: FaceDetectorMode.accurate,
-        enableContours: true,
-        enableClassification: true,
+        performanceMode: FaceDetectorMode.fast,
+        enableContours: false,
+        enableClassification: false,
       ),
     );
     _initTTS();
+    _initModel();
+  }
+  Future<void> _initialize() async {
+    await getStoreStatus();
+    await _initCamera();
+  }
+  Future<void> _initModel() async {
+    await _faceEmbeddingService.loadModel();
   }
   getStoreStatus() async {
-     storeStatus = await LocalStorageService.getStoreStatus();
+    storeStatus = await LocalStorageService.getStoreStatus();
   }
 
   Future<void> _initTTS() async {
@@ -67,53 +77,63 @@ class MyHomeCameraState extends State<MyHomecamera> {
   }
 
   Future<void> _initCamera() async {
+    // ✅ Fully dispose old controller before reinitializing
+    if (_controller != null) {
+      try {
+        _isStreamActive = false;
+        if (_controller!.value.isStreamingImages) {
+          await _controller!.stopImageStream();
+        }
+        await _controller!.dispose();
+      } catch (e) {
+      }
+      _controller = null;
+
+      // ✅ Wait for camera hardware to fully release
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    if (mounted) setState(() => _initializing = true);
+
     try {
-      // 1) Request camera permission
       final status = await Permission.camera.request();
       if (!status.isGranted) {
-        if (mounted) {
-          setState(() {
-            _initializing = false;
-            _error = 'Camera permission denied';
-          });
-        }
+        if (mounted) setState(() {
+          _initializing = false;
+          _error = 'Camera permission denied';
+        });
         return;
       }
 
-      // 2) Get available cameras
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _initializing = false;
-            _error = 'No camera found on this device';
-          });
-        }
+        if (mounted) setState(() {
+          _initializing = false;
+          _error = 'No camera found on this device';
+        });
         return;
       }
 
-      // 3) Prefer front camera if available
       final camera = cameras.firstWhere(
             (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
-      // 4) Create and initialize controller
       final controller = CameraController(
         camera,
-        ResolutionPreset.high,
+        ResolutionPreset.medium, //
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
 
       await controller.initialize();
+      await controller.setFlashMode(FlashMode.off);
 
       if (!mounted || _isDisposed) {
-        controller.dispose();
+        await controller.dispose();
         return;
       }
 
-      // Start image stream
       await controller.startImageStream(_processImageStream);
       _isStreamActive = true;
 
@@ -121,20 +141,22 @@ class MyHomeCameraState extends State<MyHomecamera> {
         setState(() {
           _controller = controller;
           _initializing = false;
+          _error = null; //
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _initializing = false;
-          _error = 'Failed to initialize camera: $e';
-        });
-      }
+      if (mounted) setState(() {
+        _initializing = false;
+        _error = 'Failed to initialize camera: $e';
+      });
     }
   }
-
+  int _frameSkipCount = 0;
   void _processImageStream(CameraImage image) async {
+    _frameSkipCount++;
+    if (_frameSkipCount % 30 != 0) return;
     if (_isDetecting || _isDisposed || !_isStreamActive) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
 
     _isDetecting = true;
     try {
@@ -143,11 +165,13 @@ class MyHomeCameraState extends State<MyHomecamera> {
       final now = DateTime.now().millisecondsSinceEpoch;
 
       // Process every 10 seconds
-      if (_lastProcessed == null || (now - _lastProcessed!) > 10000) {
+      if (_lastProcessed == null || (now - _lastProcessed!) > 5000) {
+        if (storeStatus == null || storeStatus == 0) {
+          print('Store inactive, skipping detection');
+          return; // ✅ Safe here — stream is still running, nothing was stopped
+        }
         _lastProcessed = now;
-        if(storeStatus==0){
-print('hurrey');
-          return;}
+        if (mounted) setState(() => isProcessing = true);
 
         if (_controller == null || !_controller!.value.isInitialized) {
           return;
@@ -165,31 +189,36 @@ print('hurrey');
         await Future.delayed(const Duration(milliseconds: 100));
 
         // Take picture
+
         final XFile picture = await _controller!.takePicture();
 
         // Detect face
-        final detector = DetectFace();
-        final faceImage = await detector.detectFace(picture, faceDetector);
+        final faceImage = await _detectFace.detectFace(picture, faceDetector);
 
         if (faceImage != null && mounted && !_isDisposed) {
           final croppedBytes = Uint8List.fromList(img.encodeJpg(faceImage));
 
-          print('Generating face embedding...');
-          await _faceEmbeddingService.loadModel();
           final embedding = await _faceEmbeddingService.generateEmbedding(faceImage);
 
           if (embedding != null && mounted && !_isDisposed) {
             setState(() {
               croppedFace = faceImage;
-              isProcessing = false;
               displayFace = croppedBytes;
             });
 
             // Match face and handle login/logout
             await _handleFaceMatch(embedding, timestamp);
+
+
           }
         }
-
+        if (mounted) {
+          setState(() {
+            isProcessing = false;
+            displayFace = null;
+            croppedFace = null;
+          });
+        }
         // Restart image stream
         if (_controller != null &&
             _controller!.value.isInitialized &&
@@ -206,7 +235,7 @@ print('hurrey');
       }
     } catch (e) {
       print("Error in face detection: $e");
-
+      if (mounted) setState(() => isProcessing = false);
       // Try to restart image stream on error
       if (_controller != null &&
           _controller!.value.isInitialized &&
@@ -227,9 +256,8 @@ print('hurrey');
 
   Future<void> _handleFaceMatch(List<double> embedding, String timestamp) async {
     try {
-      MatchFace match = MatchFace();
-      final res = await match.setEmbedding(embedding);
 
+      final res = await _matchFace.setEmbedding(embedding);
       if (res == null) {
         await speak("Please try again");
         if (mounted) {
@@ -278,6 +306,8 @@ print('hurrey');
       if (response.statusCode == 200) {
         // Update login status
         await _updateLoginStatus(userID, true);
+        // Update local storage
+        await LocalStorageService.updateUserLoginStatus(userID, true);
 
         if (mounted) {
           await speak("Hey $userName! Login recorded successfully");
@@ -315,6 +345,8 @@ print('hurrey');
       if (response.statusCode == 200) {
         // Update login status
         await _updateLoginStatus(userID, false);
+        // Update local storage
+        await LocalStorageService.updateUserLoginStatus(userID, false);
 
         if (mounted) {
           await speak("Hey $userName! Logout recorded successfully");
@@ -368,49 +400,92 @@ print('hurrey');
     }
   }
 
+
   Widget _buildOvalPreview() {
     final screenWidth = MediaQuery.of(context).size.width;
     final ovalWidth = screenWidth * 0.7;
     final ovalHeight = ovalWidth * 1.15;
 
-    return Stack(
-      alignment: Alignment.center,
+    return Column(
       children: [
-        ClipOval(
-          child: Container(
-            width: ovalWidth,
-            height: ovalHeight,
-            color: Colors.black12,
-            child: _controller == null || !_controller!.value.isInitialized
-                ? const Center(
-              child: Text(
-                'Contact Your Supervisor',
-                style: TextStyle(color: Colors.grey),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipOval(
+              child: Container(
+                width: ovalWidth,
+                height: ovalHeight,
+                color: Colors.black12,
+                child: _controller == null || !_controller!.value.isInitialized
+                    ? const Center(
+                  child: Text(
+                    'Contact Your Supervisor',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+                    : CameraPreview(_controller!),
               ),
-            )
-                : CameraPreview(_controller!),
-          ),
-        ),
-        // Border ring
-        IgnorePointer(
-          child: Container(
-            width: ovalWidth,
-            height: ovalHeight,
-            decoration: ShapeDecoration(
-              shape: StadiumBorder(
-                side: BorderSide(
-                  width: 4,
-                  color: Colors.white.withOpacity(0.9),
+            ),
+            // Border ring
+            IgnorePointer(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                width: ovalWidth,
+                height: ovalHeight,
+                decoration: ShapeDecoration(
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      width: isProcessing ? 6 : 4,
+                      color: isProcessing
+                          ? Colors.greenAccent.withOpacity(0.9)
+                          : Colors.white.withOpacity(0.9),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
+
+        const SizedBox(height: 12),
+
+        // ✅ Scanning indicator — only shows when processing
+        if (isProcessing)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.greenAccent,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Scanning...',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.greenAccent,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          )
+        else
+          const Text(
+            'Align your face inside the camera',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
       ],
     );
   }
 
-  @override
   @override
   void dispose() {
     _isDisposed = true;
@@ -471,13 +546,7 @@ print('hurrey');
               const SizedBox(height: 20),
               _buildOvalPreview(),
               const SizedBox(height: 16),
-              const Text(
-                'Align your face inside the camera',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white70,
-                ),
-              ),
+
               // Optional: Display the detected face
               // if (displayFace != null) ...[
               //   const SizedBox(height: 16),

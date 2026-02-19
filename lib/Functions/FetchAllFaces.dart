@@ -1,17 +1,15 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import 'fetchstoredetails.dart';
+
 class FetchFaces {
 
-
   static Future<List<Map<String, dynamic>>?> getFaceDetails() async {
-    final FlutterSecureStorage _storage =
-    const FlutterSecureStorage();
     final storeData = await LocalStorageService.getStoreDetails();
     final store = storeData?['storeId'];
-    print("✅ Fetched $store");
+    print("✅ Fetching faces for store: $store");
+
     try {
       final url = Uri.parse("$apiBaseUrl/allusers?storeId=$store");
 
@@ -24,7 +22,7 @@ class FetchFaces {
         final List<dynamic> data = jsonDecode(response.body);
 
         List<Map<String, dynamic>> users = data.map((user) {
-          return {
+          return <String, dynamic>{
             'userID': user['userID'],
             'userName': user['userName'],
             'isLoggedIn': user['isLoggedIn'],
@@ -32,8 +30,11 @@ class FetchFaces {
             'faceembed': user['faceembed'],
           };
         }).toList();
-        print("✅ Fetched ${users.length} faces");
-        await _storage.write(key: 'faceData', value: jsonEncode(users));
+
+        // ✅ Store in memory cache — no more secure storage
+        LocalStorageService.setCachedFaces(users);
+        print("✅ ${users.length} faces cached in memory");
+        return users;
 
       } else if (response.statusCode == 404) {
         print("No Faces Registered");
@@ -47,5 +48,9 @@ class FetchFaces {
       print("🔥 Error fetching Faces: $e");
       return null;
     }
+  }
+
+  static Future<void> refresh() async {
+    await getFaceDetails();
   }
 }
